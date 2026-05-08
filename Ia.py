@@ -4,25 +4,23 @@ from bs4 import BeautifulSoup
 import time
 from twilio.rest import Client
 
-# 1. جلب البيانات من "الخزنة" (Secrets) لضمان الأمان
+# --- 1. جلب مفاتيح السر من الخزنة (Secrets) ---
 try:
     ACCOUNT_SID = st.secrets["SID"]
     AUTH_TOKEN = st.secrets["TOKEN"]
     client = Client(ACCOUNT_SID, AUTH_TOKEN)
 except Exception as e:
-    st.error("خطأ: تأكد من وضع SID و TOKEN في إعدادات Secrets في موقع Streamlit")
+    st.error("🚨 خطأ: لم يتم ضبط SID و TOKEN في إعدادات Secrets")
     st.stop()
 
-# إعدادات الأرقام (ثابتة)
+# --- 2. إعدادات الأرقام وبيانات الدخول ---
 TWILIO_NUMBER = 'whatsapp:+14155238886'
 MY_NUMBER = 'whatsapp:+213775698325'
-
-# بيانات الدخول لموقع WebTU
 MY_USERNAME = "202237581202"
 MY_PASSWORD = "UkC2EJUX"
 
-st.set_page_config(page_title="رادار WebTU", page_icon="🤖")
-st.title("🤖 نظام مراقبة العلامات الآلي")
+st.set_page_config(page_title="رادار WebTU الطيب", page_icon="🤖")
+st.title("🤖 نظام مراقبة العلامات (النسخة النهائية)")
 
 # ذاكرة البوت لمنع التكرار
 if "history" not in st.session_state:
@@ -33,8 +31,12 @@ placeholder = st.empty()
 def check_webtu():
     try:
         session = requests.Session()
-        # محاكاة تسجيل الدخول
-        session.post("https://webtu.mesrs.dz/login", data={'username': MY_USERNAME, 'password': MY_PASSWORD}, timeout=15)
+        # محاولة الدخول للموقع الرسمي
+        login_response = session.post("https://webtu.mesrs.dz/login", 
+                                      data={'username': MY_USERNAME, 'password': MY_PASSWORD}, 
+                                      timeout=15)
+        
+        # التوجه لصفحة النقاط
         response = session.get("https://webtu.mesrs.dz/etudiant/cursus/notes", timeout=15)
         soup = BeautifulSoup(response.text, 'html.parser')
         rows = soup.find_all('tr')
@@ -45,35 +47,37 @@ def check_webtu():
             if len(cols) >= 2:
                 matiere = cols[0].text.strip()
                 note = cols[1].text.strip()
-                # شرط وجود علامة حقيقية
-                if note and note.replace('.', '', 1).isdigit():
-                    extracted.append(f"📚 {matiere}: {note}")
+                # ملاحظة: في وضع "الاختبار" سنقبل أي مادة حتى لو لم تظهر نقطتها بعد
+                extracted.append(f"📚 {matiere}: {note if note else 'قيد الانتظار'}")
         return extracted
-    except:
+    except Exception as e:
+        st.error(f"خطأ في الاتصال بموقع WebTU: {e}")
         return []
 
-# الحلقة الأساسية
+# --- 3. الحلقة اللانهائية للفحص (تعمل وأنت نائم) ---
 while True:
     with placeholder.container():
-        st.write(f"🔄 آخر فحص للنظام: {time.strftime('%H:%M:%S')}")
+        current_time = time.strftime('%H:%M:%S')
+        st.write(f"🔄 آخر تحديث للنظام: {current_time}")
+        
         results = check_webtu()
         
-        # للتجربة الأولى: سنرسل رسالة فورية إذا وجدنا أي مادة
         if results:
             for item in results:
+                # إذا كانت المادة لم ترسل من قبل، أرسلها الآن
                 if item not in st.session_state.history:
                     try:
                         client.messages.create(
                             from_=TWILIO_NUMBER,
-                            body=f"🚨 بشمهندس طيب! علامة جديدة ظهرت:\n{item}",
+                            body=f"🚨 بشمهندس طيب! تحديث جديد في WebTU:\n\n{item}\n\n✅ النظام شغال تمام!",
                             to=MY_NUMBER
                         )
                         st.session_state.history.add(item)
-                        st.success(f"تم إرسال: {item}")
+                        st.success(f"تم إرسال تنبيه واتساب بنجاح لـ: {item}")
                     except Exception as e:
-                        st.error(f"خطأ في إرسال الواتساب: {e}")
+                        st.error(f"فشل إرسال الواتساب: {e}")
         
-        st.write("😴 البوت يراقب الآن... سينام 15 دقيقة ثم يعاود الفحص.")
+        st.info("😴 البوت الآن في وضع المراقبة. سيفحص مجدداً بعد 15 دقيقة...")
     
-    time.sleep(900)
+    time.sleep(900) # الانتظار 15 دقيقة بين كل فحص
     
