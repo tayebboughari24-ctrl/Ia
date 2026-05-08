@@ -41,7 +41,7 @@ def check_webtu_updates():
                 matiere = cols[0].text.strip()
                 note = cols[1].text.strip()
                 # التحقق إذا كانت هناك علامة حقيقية وليست فراغاً أو "-"
-                if note and note.replace('.', '', 1).isdigit():
+                if True: # تغيير مؤقت للتجربة
                     extracted_notes.append(f"📚 المادة: {matiere}\n⭐ العلامة: {note}")
         
         return extracted_notes
