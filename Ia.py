@@ -5,8 +5,8 @@ import time
 from twilio.rest import Client
 
 # --- إعدادات الحماية والبيانات ---
-ACCOUNT_SID = 'AC4c92f7ba85364e2ac46aba9a58ec48ad'
-AUTH_TOKEN = '4YVLT7YPF2X71ESRL36U3CAB'
+ACCOUNT_SID = st.secrets["SID"]
+AUTH_TOKEN = st.secrets["TOKEN"]
 TWILIO_NUMBER = 'whatsapp:+14155238886'
 MY_NUMBER = 'whatsapp:+213775698325'
 
